@@ -1,18 +1,19 @@
+from __future__ import division
 import numpy as np
 import pandas as pd
+import socket, threading, time, os, termios, sys
 
 '''
     Use regret-matching algorithm to play DrawFist.
 '''
 
-regret_decay = 200
+regret_decay = 20000
 regret_weight = 1
-
 
 class DF:
     actions = ['00', '01', '02', '03', '04', '05', '11', '12', '13', '14', '15', '16', '22', '23', '24', '25', '26',
                '27', '33', '34', '35', '36', '37', '38', '44', '45', '46', '47', '48', '49', '55', '56', '57', '58',
-               '59', '5!']
+               '59', '5:']
     n_actions = 36
     utilities = pd.DataFrame
 
@@ -22,7 +23,7 @@ class DF:
         voice_1 = []
         for i in range(len(DF.actions)):
             gesture_1.append(int(DF.actions[i][0]))
-            if DF.actions[i][1] != '!':
+            if DF.actions[i][1] != ':':
                 voice_1.append(int(DF.actions[i][1]))
             else:
                 voice_1.append(10)
@@ -112,24 +113,13 @@ class Player:
 
 
 class Game:
-    def __init__(self, max_game=7, init_score=0):
+    def __init__(self, max_game=7):
         self.p1 = Player('robot')
         self.p2 = Player('human')
         self.max_game = max_game
-        self.score = init_score
 
         self.robot_wins = 0
         self.draws = 0
-
-        self.output = ''
-        self.num_wins = {
-            self.p1: 0,
-            self.p2: 0,
-            'Draw': 0
-        }
-
-        self.p1.regret_sum = np.loadtxt('regret_sum.txt')
-        self.p1.regret_sum = self.p1.regret_sum / regret_decay
 
     def winner(self, a1, a2):
         result = DF.utilities.loc[a1, a2]
@@ -140,66 +130,98 @@ class Game:
         else:
             return 'Draw'
 
-    def play(self, h_input, avg_regret_matching=False, train=False):
+    def play(self, avg_regret_matching=False, train=False):
         def play_regret_matching():
             if train:
-                from DrawFist.simulation import simulate
-                r = simulate('Gaussian')
+                x = 0.5 * np.random.randn(36) + 0.5
+                has_neg = False
+                for neg in x < 0:
+                    if neg:
+                        has_neg = True
+                if has_neg:
+                    x = x - 1.5 * np.min(x)
+                y = np.sum(x)
+                r = x / y
                 for i in range(0, self.max_game):
                     self.p1.update_strategy()
                     a1 = self.p1.action()
                     a2 = np.random.choice(DF.actions, p=r)
                     self.p1.regret(a1, a2)
                     winner = self.winner(a1, a2)
-                    self.num_wins[winner] += 1
-                    # np.savetxt('regret_sum.txt', self.p1.regret_sum)
+                    num_wins[winner] += 1
+                    np.savetxt('regret_sum.txt', self.p1.regret_sum)
             # add file input
             else:
+                #self.p1.regret_sum = np.loadtxt('regret_sum.txt')
+                #self.p1.regret_sum = self.p1.regret_sum / regret_decay
+                print("开始，出拳：")
+                #termikeyset()
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                s.bind(('0.0.0.0', 55555))
 
+                s.listen(1)
+                print('waiting for connection...')
+                
+                while 1:
+                            sock, addr = s.accept()
+                            t = threading.Thread(target=tcplink, args=(sock, addr))
+                            t.start()                             
+
+        def tcplink(sock, addr):
+          print('Accept new connection from %s:%s...'% addr)
+          while True:
+                data = sock.recv(1024)
+                print(data)
+                if 'nocheat' in data.decode('utf-8'):
+                   break
+          while True:
+           
                 self.p1.update_strategy()
                 a1 = self.p1.action()
-                a2 = h_input
-                self.p1.regret(a1, a2, train=True)
-                self.output = a1
-                winner = self.winner(a1, a2)
-                if winner == self.p1:
-                    self.robot_wins += 1
-                    self.score += 1
-                elif winner == 'Draw':
-                    self.draws += 1
-                    self.score -= 0.5
-                else:
-                    self.score -= 1
-                # if winner == self.p2 and random.random() < 0.5:
-                #     self.score = 0
+                with open('RobotVoice.txt', 'w', encoding='utf-8') as fwv:
+                     with open('RobotGesture.txt', 'w', encoding='utf-8') as fwh:
+                          fwv.write(str(a1[1]))
+                          fwh.write(str(a1[0]))
+                          print(a1[0], a1[1])
+                with open('ActionTrigger.txt', 'w', encoding='utf-8') as ftrigger:
+                     ftrigger.write(str(1))
+                with open('HumanVoice.txt', 'r', encoding='utf-8') as frv:
+                     with open('HumanGesture.txt', 'r', encoding='utf-8') as frh:
+                          h_g = frh.readline().strip()
+                          h_v = frv.readline().strip()
+                intg = int(h_g)
+                if h_v==':':
+                   intv = 10
+                else: 
+                   intv = int(h_v)
+                if intv-intg>6 and intv-intg<0:
+                     h_v = h_g + 3 
+                if h_g and h_v and intv-intg<6 and intv-intg>0:
+                   a2 = h_g + h_v
+                   self.p1.regret(a1, a2, train=True)
+                   winner = self.winner(a1, a2)
+                   num_wins[winner] += 1
 
-                self.num_wins[winner] += 1
-                print("电脑RM出拳 + 喊话：", self.output)
-                # np.savetxt('regret_sum_test.txt', self.p1.regret_sum)
+                with open('/home/esdc2018/桌面/Robot/RobotGesture.txt','rb') as rg:
+                     rgdata = rg.readline().strip()
+                with open('/home/esdc2018/桌面/Robot/RobotVoice.txt','rb') as rv:
+                     rvdata = rv.readline().strip()
+                
+                sock.send(rgdata+rvdata)
 
-                # print("开始，出拳：")
-                # while 1:
-                #     with open('1.txt', 'r') as fin:
-                #         flag = fin.readline().strip()
-                #         if flag == '1':
-                #             self.p1.update_strategy()
-                #             a1 = self.p1.action()
-                #             with open('4.txt', 'w', encoding='utf-8') as fwv:
-                #                 with open('5.txt', 'w', encoding='utf-8') as fwh:
-                #                     fwv.write(str(a1[1]))
-                #                     fwh.write(str(a1[0]))
-                #                     print(a1[0], a1[1])
-                #             with open('6.txt', 'r', encoding='utf-8') as frv:
-                #                 with open('7.txt', 'r', encoding='utf-8') as frh:
-                #                     h_g = frh.readline().strip()
-                #                     print('h_g:', h_g)
-                #                     h_v = frv.readline().strip()
-                #             a2 = h_g + h_v
-                #             self.p1.regret(a1, a2, train=True)
-                #             winner = self.winner(a1, a2)
-                #             num_wins[winner] += 1
-                #             with open('1.txt', 'w+') as finw:
-                #                 finw.write(str(0))
+                data = sock.recv(1024)
+                print(data)
+                time.sleep(1)
+                if not data or data.decode('utf-8') == 'exit':
+                     break
+
+                if 'nocheat' not in data.decode('utf-8'):
+                   with open('/home/esdc2018/桌面/Robot/HumanVoice.txt','w') as hv:
+                     hv.write(str(data)[2])
+                   with open('/home/esdc2018/桌面/Robot/HumanGesture.txt','w') as hg:
+                     hg.write(str(data)[3])
+          sock.close()
+          print('Connection from %s:%s closed'% addr)
 
         def play_avg_regret_matching():
             for i in range(0, self.max_game):
@@ -207,8 +229,41 @@ class Game:
                 a2 = self.p2.action(use_avg=True)
                 # a2 = np.random.choice(DF.actions)
                 winner = self.winner(a1, a2)
-                self.num_wins[winner] += 1
+                num_wins[winner] += 1
+
+        num_wins = {
+            self.p1: 0,
+            self.p2: 0,
+            'Draw': 0
+        }
 
         play_regret_matching() if not avg_regret_matching else play_avg_regret_matching()
-        print(self.num_wins)
+        print(num_wins)
 
+        if num_wins[self.p1] > num_wins[self.p2]:
+            self.robot_wins += 1
+        elif num_wins[self.p1] == num_wins[self.p2]:
+            self.draws += 1
+
+    def conclude(self):
+        """
+        let two players conclude the average strategy from the previous strategy stats
+        """
+        self.p1.learn_avg_strategy()
+        self.p2.learn_avg_strategy()
+
+
+
+if __name__ == '__main__':
+
+    game = Game(max_game=10000)
+    episode = 100
+    # print('==== Use simple regret-matching strategy === ')
+    #for i in range(episode):
+    game.play(train=False)
+    #print("robot_wins:{}, draws:{}, human_wins:{}".format(game.robot_wins, game.draws,
+    #                                                      episode - game.robot_wins - game.draws))
+
+    # print('==== Use averaged regret-matching strategy === ')
+    # game.conclude()
+    # game.play(avg_regret_matching=True)
