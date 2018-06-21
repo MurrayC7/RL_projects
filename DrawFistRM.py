@@ -10,7 +10,7 @@ import pandas as pd
 '''
 
 regret_decay = 200
-regret_weight = 1
+regret_weight = 0.9
 
 
 class DF:
@@ -170,46 +170,23 @@ class Game:
                 self.p1.update_strategy()
                 a1 = self.p1.action()
                 a2 = h_input
-                self.p1.regret(a1, a2, train=True)
+                self.p1.regret(a1, a2, train=False)
                 self.output = a1
                 winner = self.winner(a1, a2)
                 if winner == self.p1:
                     self.robot_wins += 1
-                    self.score += 1
+                    self.score += 5
                 elif winner == 'Draw':
                     self.draws += 1
                     self.score -= 0.5
                 else:
-                    self.score -= 1
+                    self.score -= 5
                 # if winner == self.p2 and random.random() < 0.5:
                 #     self.score = 0
 
                 self.num_wins[winner] += 1
                 # print("电脑RM出拳 + 喊话：", self.output)
                 # np.savetxt('regret_sum_test.txt', self.p1.regret_sum)
-                # print("开始，出拳：")
-                # while 1:
-                #     with open('1.txt', 'r') as fin:
-                #         flag = fin.readline().strip()
-                #         if flag == '1':
-                #             self.p1.update_strategy()
-                #             a1 = self.p1.action()
-                #             with open('4.txt', 'w', encoding='utf-8') as fwv:
-                #                 with open('5.txt', 'w', encoding='utf-8') as fwh:
-                #                     fwv.write(str(a1[1]))
-                #                     fwh.write(str(a1[0]))
-                #                     print(a1[0], a1[1])
-                #             with open('6.txt', 'r', encoding='utf-8') as frv:
-                #                 with open('7.txt', 'r', encoding='utf-8') as frh:
-                #                     h_g = frh.readline().strip()
-                #                     print('h_g:', h_g)
-                #                     h_v = frv.readline().strip()
-                #             a2 = h_g + h_v
-                #             self.p1.regret(a1, a2, train=True)
-                #             winner = self.winner(a1, a2)
-                #             num_wins[winner] += 1
-                #             with open('1.txt', 'w+') as finw:
-                #                 finw.write(str(0))
 
         def play_avg_regret_matching():
             for i in range(0, self.max_game):
@@ -222,7 +199,6 @@ class Game:
         play_regret_matching() if not avg_regret_matching else play_avg_regret_matching()
         # print(self.num_wins)
 
-
     def conclude(self):
         """
         let two players conclude the average strategy from the previous strategy stats
@@ -231,14 +207,32 @@ class Game:
         self.p2.learn_avg_strategy()
 
 
-# if __name__ == '__main__':
-#     game = Game(max_game=10000)
-#     episode = 100
-#     for i in range(episode):
-#         game.play(input("go:"))
+if __name__ == '__main__':
+    x = 0.5 * np.random.randn(36) + 0.5
+    has_neg = False
+    for neg in x < 0:
+        if neg:
+            has_neg = True
+    if has_neg:
+        x = x - 1.5 * np.min(x)
+    y = np.sum(x)
+    r = x / y
 
-#     print("robot_wins:{}, draws:{}, human_wins:{}".format(game.robot_wins, game.draws,
-#                                                           episode - game.robot_wins - game.draws))
+    robot_wins, draws, human_wins = 0, 0, 0
+    episode = 1000
+    for i in range(episode):
+        game = Game()
+        for j in range(7):
+            game.play(np.random.choice(DF.actions, p=r))
+        if game.robot_wins > 7 - game.robot_wins - game.draws:
+            robot_wins += 1
+        elif game.robot_wins == 7 - game.robot_wins - game.draws:
+            draws += 1
+        else:
+            human_wins += 1
+
+    print('电脑final赢:', robot_wins, '玩家final赢:', human_wins, '平局final:', draws)
+
 #
 #     # print('==== Use averaged regret-matching strategy === ')
 #     # game.conclude()

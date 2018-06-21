@@ -13,7 +13,7 @@ y = np.sum(x)
 r = x / y
 
 
-def main():
+def main(STEP):
     DF.util()
 
     """RL"""
@@ -90,7 +90,7 @@ def main():
                     i += 1
         for a in actions:
             for b in actions:
-                if score[(a, b)] == 1:
+                if score[(a, b)] > 0:
                     nuclease[a + b] = str(i)
                     i += 1
         for a in actions:
@@ -109,16 +109,19 @@ def main():
 
     # print("开始，出拳：")
     train = True
-    STEP = 50
 
     game_rm = Game(max_game=STEP)
+    game_human = Game(max_game=STEP)
 
     for step in range(STEP):
         # print("")
-        # print("")
+        print("")
 
-        inputs = np.random.choice(actions)
-        # print("人类：", inputs)
+        # inputs = np.random.choice(actions)
+        game_human.play(output)
+        inputs = game_human.output
+        print("人类：", inputs)
+
         # inputs = input("出拳 + 喊话：")
 
         if inputs != '':
@@ -164,27 +167,34 @@ def main():
             newstate = tuple(newstate)
             action = output
             #        print "program gives: %s" % output
-            if score[(output, inputs)] == 1:
+            if score[(output, inputs)] > 0:
                 nloss += 1
-                RLscore += 1
+                RLscore += 5
             elif score[(output, inputs)] == 0:
                 ntie += 1
                 RLscore -= 0.5
             elif score[(output, inputs)] == -1:
                 nwin += 1
-                RLscore -= 1
+                RLscore -= 5
             # if score[(output, inputs)] == -1 and random.random() < 0.5:
             #     RLscore = 0
             # print("电脑RL出拳 + 喊话：", output)
             # print('电脑RL赢:', nloss, '玩家RL赢:', nwin, '平局RL:', ntie)
 
             reward = score[(action, inputs)]
-            maxvalue = max(Q.get((newstate, a), 0) for a in actions)
-            Q[(state, action)] = Q.get((state, action), 0) + lr * (reward + 0.5 * maxvalue - Q.get((state, action), 0))
             succ = [Q.get((newstate, a), 0) for a in actions]
-            optimal_actions = [actions[x] for x in range(len(succ)) if succ[x] == max(succ)]
-            output = random.choice(optimal_actions) if random.random() > epsilon else random.choice(actions)
+            optimal_actions_ = [actions[x] for x in range(len(succ)) if succ[x] == max(succ)]
+            action_ = random.choice(optimal_actions_) if random.random() > epsilon else random.choice(actions)
+            maxvalue = Q.get((newstate, action_), 0)
+            Q[(state, action)] = Q.get((state, action), 0) + lr * (reward + 0.8 * maxvalue - Q.get((state, action), 0))
+            output = action_
 
+            # reward = score[(action, inputs)]
+            # maxvalue = max(Q.get((newstate, a), 0) for a in actions)
+            # Q[(state, action)] = Q.get((state, action), 0) + lr * (reward + 0.8 * maxvalue - Q.get((state, action), 0))
+            # succ = [Q.get((newstate, a), 0) for a in actions]
+            # optimal_actions = [actions[x] for x in range(len(succ)) if succ[x] == max(succ)]
+            # output = random.choice(optimal_actions) if random.random() > epsilon else random.choice(actions)
         else:
             continue
         if game_rm.score > RLscore:
@@ -193,13 +203,14 @@ def main():
             final_output = action
         else:
             final_output = random.choice([game_rm.output, action])
+        # final_output = action
         # print("predscore[game_rm.score, RLscore]: ", [game_rm.score, RLscore])
         # 0.96*(mScore[i]+(input==m[i])-(input==beat[beat[m[i]]])) + (random.random()-0.5)*dithering
         # random drop? naive drop? naive decay?
 
         # naive decay
-        game_rm.score *= 0.8
-        RLscore *= 0.8
+        game_rm.score *= 0.5
+        RLscore *= 0.5
 
         if score[(final_output, inputs)] == 1:
             final_nloss += 1
@@ -207,31 +218,28 @@ def main():
             final_ntie += 1
         elif score[(final_output, inputs)] == -1:
             final_nwin += 1
-        # print("电脑final出拳 + 喊话：", final_output)
-        # print('电脑final赢:', final_nloss, '玩家final赢:', final_nwin, '平局final:', final_ntie)
-    if final_nloss > final_nwin:
-        return 1
-    elif final_nloss < final_nwin:
-        return -1
-    else:
-        return 0
-    # print(Q)
-    # print(mymoves)
-    # print(urmoves)
-    # print(DNAmoves)
-    # print(newstate)
-    # print(state)
+        print("电脑final出拳 + 喊话：", final_output)
+        print('电脑赢:', final_nloss, '玩家赢:', final_nwin, '平局:', final_ntie)
+
+    return final_nloss, final_nwin, final_ntie
+    # if final_nloss > final_nwin:
+    #     return 1
+    # elif final_nloss < final_nwin:
+    #     return -1
+    # else:
+    #     return 0
 
 
 if __name__ == '__main__':
-    robot_wins, draws, human_wins = 0, 0, 0
-    for i in range(1000):
-        result = main()
-        if result == 1:
-            robot_wins += 1
-        elif result == 0:
-            draws += 1
-        else:
-            human_wins += 1
-    print('电脑final赢:', robot_wins, '玩家final赢:', human_wins, '平局final:', draws)
-    # main()
+    # robot_wins, draws, human_wins = 0, 0, 0
+    # for i in range(10):
+    #     result = main(STEP=1)
+    #     if result == 1:
+    #         robot_wins += 1
+    #     elif result == 0:
+    #         draws += 1
+    #     else:
+    #         human_wins += 1
+    # print('电脑final赢:', robot_wins, '玩家final赢:', human_wins, '平局final:', draws)
+    final_nloss, final_nwin, final_ntie = main(10000)
+    print('电脑final赢:', final_nloss, '玩家final赢:', final_nwin, '平局final:', final_ntie)
