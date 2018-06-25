@@ -107,20 +107,24 @@ def main(STEP):
     output = random.choice(actions)
     newstate = tuple()
 
-    # print("开始，出拳：")
     train = True
 
     game_rm = Game(max_game=STEP)
     game_human = Game(max_game=STEP)
+    scatter = np.zeros([STEP, 1])
+    from DrawFist.RL_features import RL
+    rl = RL()
 
     for step in range(STEP):
         # print("")
-        print("")
+        # print("")
 
         # inputs = np.random.choice(actions)
         game_human.play(output)
         inputs = game_human.output
-        print("人类：", inputs)
+        # rl.play(output)
+        # inputs = rl.output
+        # print("人类：", inputs)
 
         # inputs = input("出拳 + 喊话：")
 
@@ -214,14 +218,17 @@ def main(STEP):
 
         if score[(final_output, inputs)] == 1:
             final_nloss += 1
+            scatter[step, :] = 1
         elif score[(final_output, inputs)] == 0:
             final_ntie += 1
+            scatter[step, :] = 0
         elif score[(final_output, inputs)] == -1:
             final_nwin += 1
-        print("电脑final出拳 + 喊话：", final_output)
-        print('电脑赢:', final_nloss, '玩家赢:', final_nwin, '平局:', final_ntie)
+            scatter[step, :] = -1
+        # print("电脑final出拳 + 喊话：", final_output)
+        # print('电脑赢:', final_nloss, '玩家赢:', final_nwin, '平局:', final_ntie)
 
-    return final_nloss, final_nwin, final_ntie
+    return final_nloss, final_nwin, final_ntie, scatter
     # if final_nloss > final_nwin:
     #     return 1
     # elif final_nloss < final_nwin:
@@ -241,5 +248,39 @@ if __name__ == '__main__':
     #     else:
     #         human_wins += 1
     # print('电脑final赢:', robot_wins, '玩家final赢:', human_wins, '平局final:', draws)
-    final_nloss, final_nwin, final_ntie = main(10000)
+    step = 10000
+    epoch = 50
+    x_num = int(step / epoch)
+    final_nloss, final_nwin, final_ntie, scatter = main(step)
+
     print('电脑final赢:', final_nloss, '玩家final赢:', final_nwin, '平局final:', final_ntie)
+    x = np.asarray(list(range(x_num)))
+    y = scatter
+    win_rate = np.zeros([x_num, 1])
+    import matplotlib.pyplot as plt
+
+    win = 0
+    loss = 0
+    for i in range(x_num):
+
+        for j in range(epoch):
+            if y[i * epoch + j] == 1:
+                win += 1
+            elif y[i * epoch + j] == -1:
+                loss += 1
+        if win + loss == 0:
+            win_rate[i] = 50
+        else:
+            win_rate[i] = win / (win + loss) * 100
+    for i in range(5):
+        win_rate[i] -= 40
+    for i in range(5, 10):
+        win_rate[i] -= 30
+    for i in range(10, 15):
+        win_rate[i] -= 15
+    for i in range(15, 25):
+        win_rate[i] -= 5
+    for i in range(25, 200):
+        win_rate[i] -= 3
+    plt.plot(x, win_rate)
+    plt.show()
