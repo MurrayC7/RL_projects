@@ -4,8 +4,8 @@ import threading
 import time
 
 import numpy as np
-from DrawFist.CFR import Game
-from DrawFist.RL_features import RL
+from CFR import Game
+from RL_features import RL
 
 cfr = Game()
 rl = RL()
@@ -26,7 +26,7 @@ def main():
 
 
 def tcplink(sock, addr):
-    flag = True
+    # flag = True
 
     print('Accept new connection from %s:%s...' % addr)
     while True:
@@ -66,7 +66,7 @@ def nocheat_mode(sock):
         else:
             intv = int(h_v)
         if 6 < intv - intg < 0:
-            h_v = h_g + 3
+            h_v = intg + 3
         if h_g and h_v and 6 > intv - intg > 0:
             inputs = h_g + h_v
         cfr.play(inputs)
@@ -146,7 +146,7 @@ def quick_mode(sock):
         else:
             intv = int(h_v)
         if 6 < intv - intg < 0:
-            h_v = h_g + 3
+            h_v = intg + 3
         if h_g and h_v and 6 > intv - intg > 0:
             inputs = h_g + h_v
 

@@ -34,13 +34,6 @@ class RL:
         self.newstate = tuple()
 
     def play(self, inputs):
-        # print("开始，出拳：")
-        # train = True
-        # STEP = 50
-
-        # inputs = np.random.choice(actions)
-        # print("人类：", inputs)
-        # inputs = input("出拳 + 喊话：")
 
         if inputs != '':
 
@@ -93,8 +86,8 @@ class RL:
                 self.RLscore -= 1
             # if score[(output, inputs)] == -1 and random.random() < 0.5:
             #     self.RLscore = 0
-            print("电脑RL出拳 + 喊话：", self.output)
-            print('电脑RL赢:', self.nloss, '玩家RL赢:', self.nwin, '平局RL:', self.ntie)
+            # print("电脑RL出拳 + 喊话：", self.output)
+            # print('电脑RL赢:', self.nloss, '玩家RL赢:', self.nwin, '平局RL:', self.ntie)
 
             reward = self.score[(self.action, inputs)]
             maxvalue = max(self.Q.get((self.newstate, a), 0) for a in self.actions)

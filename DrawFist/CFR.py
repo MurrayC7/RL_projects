@@ -174,32 +174,8 @@ class Game:
                 #     self.score = 0
 
                 self.num_wins[winner] += 1
-                print("电脑RM出拳 + 喊话：", self.output)
+                # print("电脑RM出拳 + 喊话：", self.output)
                 # np.savetxt('regret_sum_test.txt', self.p1.regret_sum)
-
-                # print("开始，出拳：")
-                # while 1:
-                #     with open('1.txt', 'r') as fin:
-                #         flag = fin.readline().strip()
-                #         if flag == '1':
-                #             self.p1.update_strategy()
-                #             a1 = self.p1.action()
-                #             with open('4.txt', 'w', encoding='utf-8') as fwv:
-                #                 with open('5.txt', 'w', encoding='utf-8') as fwh:
-                #                     fwv.write(str(a1[1]))
-                #                     fwh.write(str(a1[0]))
-                #                     print(a1[0], a1[1])
-                #             with open('6.txt', 'r', encoding='utf-8') as frv:
-                #                 with open('7.txt', 'r', encoding='utf-8') as frh:
-                #                     h_g = frh.readline().strip()
-                #                     print('h_g:', h_g)
-                #                     h_v = frv.readline().strip()
-                #             a2 = h_g + h_v
-                #             self.p1.regret(a1, a2, train=True)
-                #             winner = self.winner(a1, a2)
-                #             num_wins[winner] += 1
-                #             with open('1.txt', 'w+') as finw:
-                #                 finw.write(str(0))
 
         def play_avg_regret_matching():
             for i in range(0, self.max_game):
@@ -210,5 +186,5 @@ class Game:
                 self.num_wins[winner] += 1
 
         play_regret_matching() if not avg_regret_matching else play_avg_regret_matching()
-        print(self.num_wins)
+        # print(self.num_wins)
 
